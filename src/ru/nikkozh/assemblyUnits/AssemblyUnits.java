@@ -4,5 +4,6 @@ import ru.nikkozh.assemblyUnits.views.GUI;
 
 public class AssemblyUnits {
   public static void main(String[] args) {
+    GUI gui = new GUI();
   }
 }
