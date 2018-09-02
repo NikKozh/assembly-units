@@ -14,25 +14,59 @@ import java.awt.event.ActionListener;
 
 public class GUI {
   public static final JFrame frame = new JFrame("Управление сборочными единицами");
-  private final JTextField partNameForCreating, partAmountForCreating;
-  private final JTextField partNameForEditing, partAmountForEditing;
-  private final JButton jButtonCreatePart, jButtonEditPart;
-  private final JList<String> partList;
-  private final JPanel centerPanel, partListPanel;
-  private final JPanel creatingPanel, editingPanel;
   
+  private final JTextField partNameForCreating, partAmountForCreating,
+                           partNameForEditing, partAmountForEditing;
+  
+  private final JButton jButtonCreatePart, jButtonEditPart,
+                        jButtonCreateAssembly, jButtonDeleteAssembly;
+  
+  private final JList<String> partList, assemblyList;
+  
+  private final JPanel centerPanel, eastPanel, westPanel,
+                       creatingPanel, editingPanel,
+                       assemblyListPanel, assemblyButtonsPanel;
+  
+  // TODO: рефакторинг: разделить конструктор на несколько методов
   public GUI() {
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     Container container = frame.getContentPane();
+    
+    DefaultListModel<String> assemblyListModel = new DefaultListModel<>();
+    assemblyList = new JList<>(assemblyListModel);
+    JScrollPane assemblyListSP = new JScrollPane(assemblyList);
+    
+    assemblyListPanel = new JPanel();
+    assemblyListPanel.setLayout(new BoxLayout(assemblyListPanel, BoxLayout.Y_AXIS));
+    assemblyListPanel.add(new JLabel("Управление сборками"));
+    assemblyListPanel.add(assemblyListSP);
+    
+    jButtonCreateAssembly = new JButton("Добавить");
+    jButtonDeleteAssembly = new JButton("Удалить");
+    
+    assemblyButtonsPanel = new JPanel(new FlowLayout());
+    assemblyButtonsPanel.add(jButtonCreateAssembly);
+    assemblyButtonsPanel.add(jButtonDeleteAssembly);
+    
+    westPanel = new JPanel(new BorderLayout());
+    // westPanel.setLayout(new BoxLayout(westPanel, BoxLayout.Y_AXIS));
+    // westPanel.add(assemblyListPanel);
+    // westPanel.add(assemblyButtonsPanel);
+    westPanel.add(new JLabel("Управление сборками"), BorderLayout.NORTH);
+    westPanel.add(assemblyListSP, BorderLayout.CENTER);
+    westPanel.add(assemblyButtonsPanel, BorderLayout.SOUTH);
+    westPanel.setPreferredSize(new Dimension(200, 0));
     
     partNameForCreating = new JTextField(10);
     partAmountForCreating = new JTextField(10);
     
     DefaultListModel<String> partListModel = new DefaultListModel<>();
     partList = new JList<>(partListModel);
-    JScrollPane sp = new JScrollPane(partList);
+    JScrollPane partListSP = new JScrollPane(partList);
     
     jButtonCreatePart = new JButton("Создать");
+    // TODO: рефакторинг: вынести в отдельный внутренний класс,
+    // чтобы можно было обращаться к полям класса в другом месте:
     jButtonCreatePart.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -40,6 +74,7 @@ public class GUI {
       }
     });
     
+    // TODO: сделать ещё одну панель с GridLayout внутри editingPanel и поместить туда лейблы с textEditor'ами
     creatingPanel = new JPanel(new FlowLayout());
     creatingPanel.add(new JLabel("Добавить новую деталь"));
     creatingPanel.add(new JLabel("Наименование детали:"));
@@ -53,6 +88,7 @@ public class GUI {
     
     jButtonEditPart = new JButton("Редактировать");
     
+    // TODO: сделать ещё одну панель с GridLayout внутри editingPanel и поместить туда лейблы с textEditor'ами
     editingPanel = new JPanel(new FlowLayout());
     editingPanel.add(new JLabel("Редактировать деталь"));
     editingPanel.add(new JLabel("Наименование детали:"));
@@ -66,15 +102,18 @@ public class GUI {
     centerPanel.add(creatingPanel);
     centerPanel.add(editingPanel);
     
-    partListPanel = new JPanel();
-    partListPanel.setLayout(new BoxLayout(partListPanel, BoxLayout.Y_AXIS));
-    partListPanel.add(new JLabel("Сборочная единица 1:"));
-    partListPanel.add(sp);
+    eastPanel = new JPanel();
+    eastPanel.setLayout(new BoxLayout(eastPanel, BoxLayout.Y_AXIS));
+    eastPanel.add(new JLabel("Сборочная единица 1"));
+    eastPanel.add(partListSP);
+    eastPanel.setPreferredSize(new Dimension(200, 0));
     
+    // TODO: настроить пространство между компонентами главного BorderLayout
+    container.add(BorderLayout.WEST, westPanel);
     container.add(BorderLayout.CENTER, centerPanel);
-    container.add(BorderLayout.EAST, partListPanel);
+    container.add(BorderLayout.EAST, eastPanel);
     
-    frame.setSize(550, 600);
+    frame.setSize(680, 450);
     frame.setVisible(true);
   }
 }
