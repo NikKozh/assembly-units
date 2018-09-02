@@ -108,7 +108,7 @@ public class GUI {
     eastPanel.add(partListSP);
     eastPanel.setPreferredSize(new Dimension(200, 0));
     
-    // TODO: настроить пространство между компонентами главного BorderLayout
+    // TODO: настроить пространство между компонентами главного BorderLayout (gap)
     container.add(BorderLayout.WEST, westPanel);
     container.add(BorderLayout.CENTER, centerPanel);
     container.add(BorderLayout.EAST, eastPanel);
