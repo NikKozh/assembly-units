@@ -14,27 +14,23 @@ import java.awt.event.ActionListener;
 
 public class GUI {
   public static final JFrame frame = new JFrame("Управление сборочными единицами");
-  private final JTextField partName, partAmount;
-  private final JButton jButtonCreatePart;
+  private final JTextField partNameForCreating, partAmountForCreating;
+  private final JTextField partNameForEditing, partAmountForEditing;
+  private final JButton jButtonCreatePart, jButtonEditPart;
   private final JList<String> partList;
-  private final JPanel partPanel, partListPanel;
+  private final JPanel centerPanel, partListPanel;
+  private final JPanel creatingPanel, editingPanel;
   
   public GUI() {
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     Container container = frame.getContentPane();
     
-    partPanel = new JPanel();
-    
-    partName = new JTextField(10);
-    
-    partAmount = new JTextField(10);    
-    
-    partListPanel = new JPanel();
+    partNameForCreating = new JTextField(10);
+    partAmountForCreating = new JTextField(10);
     
     DefaultListModel<String> partListModel = new DefaultListModel<>();
     partList = new JList<>(partListModel);
     JScrollPane sp = new JScrollPane(partList);
-    sp.setPreferredSize(new Dimension(200, 300));
     
     jButtonCreatePart = new JButton("Создать");
     jButtonCreatePart.addActionListener(new ActionListener() {
@@ -44,18 +40,41 @@ public class GUI {
       }
     });
     
-    partPanel.add(new JLabel("Наименование детали:"));
-    partPanel.add(partName);
-    partPanel.add(new JLabel("Количество деталей:"));
-    partPanel.add(partAmount);
-    partPanel.add(jButtonCreatePart);
+    creatingPanel = new JPanel(new FlowLayout());
+    creatingPanel.add(new JLabel("Добавить новую деталь"));
+    creatingPanel.add(new JLabel("Наименование детали:"));
+    creatingPanel.add(partNameForCreating);
+    creatingPanel.add(new JLabel("Количество деталей:"));
+    creatingPanel.add(partAmountForCreating);
+    creatingPanel.add(jButtonCreatePart);
+    
+    partNameForEditing = new JTextField(10);
+    partAmountForEditing = new JTextField(10);
+    
+    jButtonEditPart = new JButton("Редактировать");
+    
+    editingPanel = new JPanel(new FlowLayout());
+    editingPanel.add(new JLabel("Редактировать деталь"));
+    editingPanel.add(new JLabel("Наименование детали:"));
+    editingPanel.add(partNameForEditing);
+    editingPanel.add(new JLabel("Количество деталей:"));
+    editingPanel.add(partAmountForEditing);
+    editingPanel.add(jButtonEditPart);
+    
+    centerPanel = new JPanel();
+    centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+    centerPanel.add(creatingPanel);
+    centerPanel.add(editingPanel);
+    
+    partListPanel = new JPanel();
+    partListPanel.setLayout(new BoxLayout(partListPanel, BoxLayout.Y_AXIS));
     partListPanel.add(new JLabel("Сборочная единица 1:"));
     partListPanel.add(sp);
     
-    container.add(BorderLayout.CENTER, partPanel);
+    container.add(BorderLayout.CENTER, centerPanel);
     container.add(BorderLayout.EAST, partListPanel);
     
-    frame.setSize(600, 600);
+    frame.setSize(550, 600);
     frame.setVisible(true);
   }
 }
