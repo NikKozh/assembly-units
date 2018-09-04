@@ -4,6 +4,7 @@ import java.io.*;
 import javax.swing.*;
 
 import javafx.scene.layout.Border;
+import ru.nikkozh.assemblyUnits.models.AssemblyUnitService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,13 +16,19 @@ import java.awt.event.ActionListener;
 public class GUI {
   public static final JFrame frame = new JFrame("Управление сборочными единицами");
   
+  private JLabel assemblyUnitName;
+  
   private final JTextField partNameForCreating, partAmountForCreating,
                            partNameForEditing, partAmountForEditing;
   
-  private final JButton jButtonCreatePart, jButtonEditPart,
-                        jButtonCreateAssembly, jButtonDeleteAssembly;
+  private final JButton createPartButton, editPartButton, deletePartButton,
+                        createAssemblyButton, deleteAssemblyButton;
   
   private final JList<String> partList, assemblyList;
+  private final DefaultListModel<String> partListModel;
+  
+  /*private final JTable partTable;
+  private final ListSele*/
   
   private final JPanel centerPanel, eastPanel, westPanel,
                        creatingPanel, editingPanel,
@@ -41,12 +48,12 @@ public class GUI {
     assemblyListPanel.add(new JLabel("Управление сборками"));
     assemblyListPanel.add(assemblyListSP);
     
-    jButtonCreateAssembly = new JButton("Добавить");
-    jButtonDeleteAssembly = new JButton("Удалить");
+    createAssemblyButton = new JButton("Добавить");
+    deleteAssemblyButton = new JButton("Удалить");
     
     assemblyButtonsPanel = new JPanel(new FlowLayout());
-    assemblyButtonsPanel.add(jButtonCreateAssembly);
-    assemblyButtonsPanel.add(jButtonDeleteAssembly);
+    assemblyButtonsPanel.add(createAssemblyButton);
+    assemblyButtonsPanel.add(deleteAssemblyButton);
     
     westPanel = new JPanel(new BorderLayout());
     // westPanel.setLayout(new BoxLayout(westPanel, BoxLayout.Y_AXIS));
@@ -60,17 +67,34 @@ public class GUI {
     partNameForCreating = new JTextField(10);
     partAmountForCreating = new JTextField(10);
     
-    DefaultListModel<String> partListModel = new DefaultListModel<>();
+    partListModel = new DefaultListModel<>();
     partList = new JList<>(partListModel);
     JScrollPane partListSP = new JScrollPane(partList);
     
-    jButtonCreatePart = new JButton("Создать");
+    assemblyUnitName = new JLabel(AssemblyUnitService.getInstance().getAssemblyUnitName(1));
+    initPartList();
+    
+    createPartButton = new JButton("Создать");
     // TODO: рефакторинг: вынести в отдельный внутренний класс,
     // чтобы можно было обращаться к полям класса в другом месте:
-    jButtonCreatePart.addActionListener(new ActionListener() {
+    createPartButton.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        partListModel.addElement("Новая деталь (1 шт.)");
+        // partList.clearSelection(); TODO: перенести это в кнопку редактирования
+        
+        // TODO: addPart должен возвращать пустую строку в случае успеха или текст ошибки для пользователя
+        //       Принимать должен String и делать преобразование к числу на своей стороне
+        //       В GUI надо сделать отдельный метод showError(String text) и в случае, если addPart вернул не пустую строку, передавать её в тот метод
+        try {
+          if (AssemblyUnitService.getInstance().addPart(1, partNameForCreating.getText(), Integer.valueOf(partAmountForCreating.getText()))) {
+            partNameForCreating.setText("");
+            partAmountForCreating.setText("");
+            initPartList();
+          }
+        } catch (NumberFormatException ex) {
+          // TODO: добавить сообщение о некорректном числе
+          ex.printStackTrace();
+        }
       }
     });
     
@@ -81,12 +105,13 @@ public class GUI {
     creatingPanel.add(partNameForCreating);
     creatingPanel.add(new JLabel("Количество деталей:"));
     creatingPanel.add(partAmountForCreating);
-    creatingPanel.add(jButtonCreatePart);
+    creatingPanel.add(createPartButton);
     
     partNameForEditing = new JTextField(10);
     partAmountForEditing = new JTextField(10);
     
-    jButtonEditPart = new JButton("Редактировать");
+    editPartButton = new JButton("Редактировать");
+    deletePartButton = new JButton("Удалить");
     
     // TODO: сделать ещё одну панель с GridLayout внутри editingPanel и поместить туда лейблы с textEditor'ами
     editingPanel = new JPanel(new FlowLayout());
@@ -95,7 +120,8 @@ public class GUI {
     editingPanel.add(partNameForEditing);
     editingPanel.add(new JLabel("Количество деталей:"));
     editingPanel.add(partAmountForEditing);
-    editingPanel.add(jButtonEditPart);
+    editingPanel.add(editPartButton);
+    editingPanel.add(deletePartButton);
     
     centerPanel = new JPanel();
     centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
@@ -104,7 +130,7 @@ public class GUI {
     
     eastPanel = new JPanel();
     eastPanel.setLayout(new BoxLayout(eastPanel, BoxLayout.Y_AXIS));
-    eastPanel.add(new JLabel("Сборочная единица 1"));
+    eastPanel.add(assemblyUnitName);
     eastPanel.add(partListSP);
     eastPanel.setPreferredSize(new Dimension(200, 0));
     
@@ -115,5 +141,14 @@ public class GUI {
     
     frame.setSize(680, 450);
     frame.setVisible(true);
+  }
+  
+  // TODO: оптимизация: вместо того, чтобы каждый раз занулять таблицу и строить заново,
+  //       нужно передавать методу изменённый\удалённый элемент и работать только с ним
+  private void initPartList() {
+    partListModel.clear();
+    AssemblyUnitService.getInstance().getPartList(1).forEach(part ->
+      partListModel.addElement(part)
+    );
   }
 }
