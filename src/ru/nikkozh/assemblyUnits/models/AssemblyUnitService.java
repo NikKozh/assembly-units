@@ -32,8 +32,29 @@ public class AssemblyUnitService {
   public boolean addPart(int assemblyUnitId, String partName, int partAmount) {
     // TODO: при такой проверке невозможно различить, произошла ли ошибка в вводе или внутри Ѕƒ
     // ћожет, сделать возвращаемый тип не логический, а что-нибудь посложнее?
-    if (!partName.isEmpty() && partAmount > 0) {
+    if (assemblyUnitId > 0 && !partName.isEmpty() && partAmount > 0) {
+      setAssemblyUnit(assemblyUnitId);
+
+      for (String name : assemblyUnit.getParts().keySet()) {
+        if (name.equals(partName)) {
+          return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, partName, partName, partAmount);
+        }
+      }
       return AssemblyUnitDao.getInstance().addPart(assemblyUnitId, partName, partAmount);
+    }
+    return false;
+  }
+  
+  public boolean updatePart(int assemblyUnitId, String oldPartName, String newPartName, int partAmount) {
+    if (assemblyUnitId > 0 && !oldPartName.isEmpty() && !newPartName.isEmpty() && partAmount > 0) {
+      return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, oldPartName, newPartName, partAmount);
+    }
+    return false;
+  }
+  
+  public boolean deletePart(int assemblyUnitId, String partName) {
+    if (assemblyUnitId > 0 && !partName.isEmpty()) {
+      return AssemblyUnitDao.getInstance().deletePart(assemblyUnitId, partName);
     }
     return false;
   }
@@ -60,15 +81,18 @@ public class AssemblyUnitService {
     setAssemblyUnit(id);
     
     List<Vector<String>> partTable = new ArrayList();
-    assemblyUnit.getParts().entrySet().stream().forEach(part -> {
-      Vector<String> partColumns = new Vector<String>();
-      partColumns.add(part.getKey());
-      partColumns.add(part.getValue().toString());
-      partTable.add(partColumns);
-    });
+    if (assemblyUnit != null) {
+      assemblyUnit.getParts().entrySet().stream().forEach(part -> {
+        Vector<String> partColumns = new Vector<String>();
+        partColumns.add(part.getKey());
+        partColumns.add(part.getValue().toString());
+        partTable.add(partColumns);
+      });
+    }
     return partTable;
   }
   
+  // TODO: по сути, € сейчас одну строчку кода подлиннее заменил другой строчкой кода покороче. ≈сть ли смысл?
   private void setAssemblyUnit(int id) {
       assemblyUnit = AssemblyUnitDao.getInstance().getAssemblyUnit(id);
   }

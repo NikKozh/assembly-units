@@ -31,8 +31,44 @@ public class AssemblyUnitDao {
     
     try {
       String sql = "INSERT INTO parts (assembly_unit_id, name, amount) VALUES (?, ?, ?);";
-      Object[] param = { assemblyUnitId, partName, partAmount };
-      if (db.executeUpdate(sql, param) == 1) {
+      Object[] params = { assemblyUnitId, partName, partAmount };
+      if (db.executeUpdate(sql, params) == 1) {
+        result = true;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      closeAll();
+    }
+    
+    return result;
+  }
+  
+  public boolean updatePart(int assemblyUnitId, String oldPartName, String newPartName, int partAmount) {
+    boolean result = false;
+    
+    try {
+      String sql = "UPDATE parts SET name = ?, amount = ? WHERE assembly_unit_id = ? AND name = ?;";
+      Object[] params = { newPartName, partAmount, assemblyUnitId, oldPartName };
+      if (db.executeUpdate(sql, params) == 1) {
+        result = true;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      closeAll();
+    }
+    
+    return result;
+  }
+  
+  public boolean deletePart(int assemblyUnitId, String partName) {
+    boolean result = false;
+    
+    try {
+      String sql = "DELETE FROM parts WHERE assembly_unit_id = ? AND name = ?;";
+      Object[] params = { assemblyUnitId, partName };
+      if (db.executeUpdate(sql, params) == 1) {
         result = true;
       }
     } catch (Exception e) {

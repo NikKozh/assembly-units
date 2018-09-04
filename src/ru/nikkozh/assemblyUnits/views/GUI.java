@@ -1,19 +1,12 @@
 package ru.nikkozh.assemblyUnits.views;
 
-import java.io.*;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
-import com.mysql.cj.xdevapi.Table;
-
-import javafx.scene.layout.Border;
 import ru.nikkozh.assemblyUnits.models.AssemblyUnitService;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Vector;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -21,7 +14,7 @@ import java.awt.event.ActionListener;
 public class GUI {
   public static final JFrame frame = new JFrame("Управление сборочными единицами");
   
-  private JLabel assemblyUnitName;
+  private JLabel assemblyUnitName, partCount;
   
   private final JTextField partNameForCreating, partAmountForCreating,
                            partNameForEditing, partAmountForEditing;
@@ -40,8 +33,15 @@ public class GUI {
                        creatingPanel, editingPanel,
                        assemblyListPanel, assemblyButtonsPanel;
   
+  private boolean isPartTableClearing;
+  private int selectedRow;
+  
   // TODO: рефакторинг: разделить конструктор на несколько методов
+  // TODO: если будет время, сделать всякие удобные мелочи типа фокуса на полях ввода, отправки по нажатию энтера и т.д.
   public GUI() {
+    isPartTableClearing = false;
+    selectedRow = -1;
+    
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     Container container = frame.getContentPane();
     
@@ -86,17 +86,26 @@ public class GUI {
       // TODO: вынести в отдельный внутренний класс
       @Override
       public void valueChanged(ListSelectionEvent e) {
-        if (e.getValueIsAdjusting()) {
-          partNameForEditing.setText(partTable.getValueAt(partTable.getSelectedRow(), 0).toString());
-          partAmountForEditing.setText(partTable.getValueAt(partTable.getSelectedRow(), 1).toString());
+        // Если событие сейчас НЕ в цепочке других событий, тогда выполняем этот код
+        // Для того, чтобы код в условии выполнялся всегда только один раз
+        if (!e.getValueIsAdjusting()) {
+          try {
+            partNameForEditing.setText(partTable.getValueAt(partTable.getSelectedRow(), 0).toString());
+            partAmountForEditing.setText(partTable.getValueAt(partTable.getSelectedRow(), 1).toString());
+            selectedRow = partTable.getSelectedRow();
+          } catch (Exception ex) {
+            System.out.println("****** ERROR"); // TODO: что-то с этим сделать
+          }
         }
       }
     });
-    
+        
     JScrollPane partListSP = new JScrollPane(partTable);
     
     assemblyUnitName = new JLabel(AssemblyUnitService.getInstance().getAssemblyUnitName(1));
     initPartTable();
+    
+    partCount = new JLabel("Количество деталей: " + partTableModel.getRowCount());
     
     createPartButton = new JButton("Создать");
     // TODO: рефакторинг: вынести в отдельный внутренний класс,
@@ -112,6 +121,7 @@ public class GUI {
             partNameForCreating.setText("");
             partAmountForCreating.setText("");
             initPartTable();
+            partCount.setText("Количество деталей: " + partTableModel.getRowCount());
           }
         } catch (NumberFormatException ex) {
           // TODO: добавить сообщение о некорректном числе
@@ -137,20 +147,32 @@ public class GUI {
       // TODO: вынести в отдельный внутренний класс
       @Override
       public void actionPerformed(ActionEvent e) {
-        partNameForEditing.setText("");
-        partAmountForEditing.setText("");
-        partTable.clearSelection();
+        // TODO: подумать над рефакторингом, условие и вызов метода получаются вообще дикими (и то же самое в других местах):
+        //       и ещё подумать над тем, чтобы преобразование string to int делал сервис, а не view
+        if (AssemblyUnitService.getInstance().updatePart(1, partTable.getValueAt(selectedRow, 0).toString(), partNameForEditing.getText(), Integer.valueOf(partAmountForEditing.getText()))) {
+          partNameForEditing.setText("");
+          partAmountForEditing.setText("");
+          partTable.clearSelection();
+          selectedRow = -1;
+          initPartTable();
+        }
       }
     });
     
     deletePartButton = new JButton("Удалить");
     deletePartButton.addActionListener(new ActionListener() {
-      // TOOD: вынести в отдельный внутренний класс
+      // TODO: вынести в отдельный внутренний класс
       @Override
       public void actionPerformed(ActionEvent e) {
-        partNameForEditing.setText("");
-        partAmountForEditing.setText("");
-        partTable.clearSelection();
+        // TODO: добавить реакцию на ошибки сюда
+        if (AssemblyUnitService.getInstance().deletePart(1, partNameForEditing.getText())) {
+          partNameForEditing.setText("");
+          partAmountForEditing.setText("");
+          partTable.clearSelection();
+          selectedRow = -1;
+          initPartTable();
+          partCount.setText("Количество деталей: " + partTableModel.getRowCount());
+        }
       }
     });
     
@@ -172,7 +194,7 @@ public class GUI {
     eastPanel = new JPanel();
     eastPanel.setLayout(new BoxLayout(eastPanel, BoxLayout.Y_AXIS));
     eastPanel.add(assemblyUnitName);
-    eastPanel.add(new JLabel("Список деталей:"));
+    eastPanel.add(partCount);
     eastPanel.add(partListSP);
     eastPanel.setPreferredSize(new Dimension(200, 0));
     
@@ -187,11 +209,35 @@ public class GUI {
   
   // TODO: оптимизация: вместо того, чтобы каждый раз занулять таблицу и строить заново,
   //       нужно передавать методу изменённый\удалённый элемент и работать только с ним
-  private void initPartTable() {    
+  private void initPartTable() {
+    /*
+     * Перед каждым добавлением нового элемента:
+     * 1. Проверить, выделена ли какая-либо строка
+     * 2. Если да, то сохраняем наименование детали из этой строки (из таблицы, не из полей ввода!)
+     * 3. Обновляем таблицу, выделение теряется.
+     * 4. Ищем сохранённое наименование детали, которая была выделена
+     * 5. Если находим, выясняем номер её строки.
+     * 6. Выделяем эту строку программно.
+     */
+    
+    String selectedPart = null;
+    if (selectedRow != -1) {
+      selectedPart = partTable.getValueAt(partTable.getSelectedRow(), 0).toString(); 
+    }
+    
     partTableModel.setRowCount(0);
     partTableModel.fireTableDataChanged();
     AssemblyUnitService.getInstance().getPartTable(1).forEach(partRow -> {
       partTableModel.addRow(partRow);
     });
+    
+    if (selectedPart != null) {
+      for (int i = 0; i < partTable.getRowCount(); i++) {
+        if (selectedPart.equals(partTable.getValueAt(i, 0))) {
+          partTable.changeSelection(i, 0, false, false);
+          break;
+        }
+      }
+    }
   }
 }
