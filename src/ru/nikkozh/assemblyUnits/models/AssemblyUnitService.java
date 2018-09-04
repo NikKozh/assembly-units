@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 import java.util.stream.Collectors;
 
 import ru.nikkozh.assemblyUnits.dao.AssemblyUnitDao;
@@ -51,6 +52,21 @@ public class AssemblyUnitService {
       partList.add(part.getKey() + " | " + part.getValue() + " шт.")
     );
     return partList;
+  }
+  
+  // Возвращаем вложенные Lists вместо String[][] для того, чтобы можно было сделать перебор в функциональном стиле
+  // Внутренний Vector нужен для того, чтобы сразу передать его в JTable как row без доп. преобразований и приведений
+  public List<Vector<String>> getPartTable(int id) {
+    setAssemblyUnit(id);
+    
+    List<Vector<String>> partTable = new ArrayList();
+    assemblyUnit.getParts().entrySet().stream().forEach(part -> {
+      Vector<String> partColumns = new Vector<String>();
+      partColumns.add(part.getKey());
+      partColumns.add(part.getValue().toString());
+      partTable.add(partColumns);
+    });
+    return partTable;
   }
   
   private void setAssemblyUnit(int id) {

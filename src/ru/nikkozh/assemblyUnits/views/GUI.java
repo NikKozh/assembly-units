@@ -2,6 +2,11 @@ package ru.nikkozh.assemblyUnits.views;
 
 import java.io.*;
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
+
+import com.mysql.cj.xdevapi.Table;
 
 import javafx.scene.layout.Border;
 import ru.nikkozh.assemblyUnits.models.AssemblyUnitService;
@@ -27,8 +32,10 @@ public class GUI {
   private final JList<String> partList, assemblyList;
   private final DefaultListModel<String> partListModel;
   
-  /*private final JTable partTable;
-  private final ListSele*/
+  private final JTable partTable;
+  private final String[] partTableColumnNames = { "Наименование", "Количество" };
+  private final ListSelectionModel partTableSelectionModel;
+  private final DefaultTableModel partTableModel;
   
   private final JPanel centerPanel, eastPanel, westPanel,
                        creatingPanel, editingPanel,
@@ -69,7 +76,25 @@ public class GUI {
     
     partListModel = new DefaultListModel<>();
     partList = new JList<>(partListModel);
-    JScrollPane partListSP = new JScrollPane(partList);
+    
+    partTable = new JTable();
+    
+    partTableModel = (DefaultTableModel)partTable.getModel();
+    partTableModel.setColumnIdentifiers(partTableColumnNames);
+    
+    partTableSelectionModel = partTable.getSelectionModel();
+    partTableSelectionModel.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    partTableSelectionModel.addListSelectionListener(new ListSelectionListener() {
+      @Override
+      public void valueChanged(ListSelectionEvent e) {
+        String selectedData = null;
+        
+        System.out.println(partTable.getValueAt(partTable.getSelectedRow(), 0).toString() +
+                           partTable.getValueAt(partTable.getSelectedRow(), 1).toString());
+      }
+    });
+    
+    JScrollPane partListSP = new JScrollPane(partTable);
     
     assemblyUnitName = new JLabel(AssemblyUnitService.getInstance().getAssemblyUnitName(1));
     initPartList();
@@ -131,6 +156,7 @@ public class GUI {
     eastPanel = new JPanel();
     eastPanel.setLayout(new BoxLayout(eastPanel, BoxLayout.Y_AXIS));
     eastPanel.add(assemblyUnitName);
+    eastPanel.add(new JLabel("Список деталей:"));
     eastPanel.add(partListSP);
     eastPanel.setPreferredSize(new Dimension(200, 0));
     
@@ -139,16 +165,22 @@ public class GUI {
     container.add(BorderLayout.CENTER, centerPanel);
     container.add(BorderLayout.EAST, eastPanel);
     
-    frame.setSize(680, 450);
+    frame.setSize(680, 300);
     frame.setVisible(true);
   }
   
   // TODO: оптимизация: вместо того, чтобы каждый раз занулять таблицу и строить заново,
   //       нужно передавать методу изменённый\удалённый элемент и работать только с ним
   private void initPartList() {
-    partListModel.clear();
+    /*partListModel.clear();
     AssemblyUnitService.getInstance().getPartList(1).forEach(part ->
       partListModel.addElement(part)
-    );
+    );*/
+    
+    partTableModel.setRowCount(0);
+    partTableModel.fireTableDataChanged();
+    AssemblyUnitService.getInstance().getPartTable(1).forEach(partRow -> {
+      partTableModel.addRow(partRow);
+    });
   }
 }
