@@ -29,8 +29,7 @@ public class GUI {
   private final JButton createPartButton, editPartButton, deletePartButton,
                         createAssemblyButton, deleteAssemblyButton;
   
-  private final JList<String> partList, assemblyList;
-  private final DefaultListModel<String> partListModel;
+  private final JList<String> assemblyList;
   
   private final JTable partTable;
   private final String[] partTableColumnNames = { "Наименование", "Количество" };
@@ -63,9 +62,6 @@ public class GUI {
     assemblyButtonsPanel.add(deleteAssemblyButton);
     
     westPanel = new JPanel(new BorderLayout());
-    // westPanel.setLayout(new BoxLayout(westPanel, BoxLayout.Y_AXIS));
-    // westPanel.add(assemblyListPanel);
-    // westPanel.add(assemblyButtonsPanel);
     westPanel.add(new JLabel("Управление сборками"), BorderLayout.NORTH);
     westPanel.add(assemblyListSP, BorderLayout.CENTER);
     westPanel.add(assemblyButtonsPanel, BorderLayout.SOUTH);
@@ -73,11 +69,13 @@ public class GUI {
     
     partNameForCreating = new JTextField(10);
     partAmountForCreating = new JTextField(10);
-    
-    partListModel = new DefaultListModel<>();
-    partList = new JList<>(partListModel);
-    
-    partTable = new JTable();
+      
+    partTable = new JTable() {
+      @Override
+      public boolean isCellEditable(int row, int column) {
+        return false;
+      }
+    };
     
     partTableModel = (DefaultTableModel)partTable.getModel();
     partTableModel.setColumnIdentifiers(partTableColumnNames);
@@ -85,19 +83,20 @@ public class GUI {
     partTableSelectionModel = partTable.getSelectionModel();
     partTableSelectionModel.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     partTableSelectionModel.addListSelectionListener(new ListSelectionListener() {
+      // TODO: вынести в отдельный внутренний класс
       @Override
       public void valueChanged(ListSelectionEvent e) {
-        String selectedData = null;
-        
-        System.out.println(partTable.getValueAt(partTable.getSelectedRow(), 0).toString() +
-                           partTable.getValueAt(partTable.getSelectedRow(), 1).toString());
+        if (e.getValueIsAdjusting()) {
+          partNameForEditing.setText(partTable.getValueAt(partTable.getSelectedRow(), 0).toString());
+          partAmountForEditing.setText(partTable.getValueAt(partTable.getSelectedRow(), 1).toString());
+        }
       }
     });
     
     JScrollPane partListSP = new JScrollPane(partTable);
     
     assemblyUnitName = new JLabel(AssemblyUnitService.getInstance().getAssemblyUnitName(1));
-    initPartList();
+    initPartTable();
     
     createPartButton = new JButton("Создать");
     // TODO: рефакторинг: вынести в отдельный внутренний класс,
@@ -105,8 +104,6 @@ public class GUI {
     createPartButton.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        // partList.clearSelection(); TODO: перенести это в кнопку редактирования
-        
         // TODO: addPart должен возвращать пустую строку в случае успеха или текст ошибки для пользователя
         //       Принимать должен String и делать преобразование к числу на своей стороне
         //       В GUI надо сделать отдельный метод showError(String text) и в случае, если addPart вернул не пустую строку, передавать её в тот метод
@@ -114,7 +111,7 @@ public class GUI {
           if (AssemblyUnitService.getInstance().addPart(1, partNameForCreating.getText(), Integer.valueOf(partAmountForCreating.getText()))) {
             partNameForCreating.setText("");
             partAmountForCreating.setText("");
-            initPartList();
+            initPartTable();
           }
         } catch (NumberFormatException ex) {
           // TODO: добавить сообщение о некорректном числе
@@ -136,7 +133,26 @@ public class GUI {
     partAmountForEditing = new JTextField(10);
     
     editPartButton = new JButton("Редактировать");
+    editPartButton.addActionListener(new ActionListener() {
+      // TODO: вынести в отдельный внутренний класс
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        partNameForEditing.setText("");
+        partAmountForEditing.setText("");
+        partTable.clearSelection();
+      }
+    });
+    
     deletePartButton = new JButton("Удалить");
+    deletePartButton.addActionListener(new ActionListener() {
+      // TOOD: вынести в отдельный внутренний класс
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        partNameForEditing.setText("");
+        partAmountForEditing.setText("");
+        partTable.clearSelection();
+      }
+    });
     
     // TODO: сделать ещё одну панель с GridLayout внутри editingPanel и поместить туда лейблы с textEditor'ами
     editingPanel = new JPanel(new FlowLayout());
@@ -171,12 +187,7 @@ public class GUI {
   
   // TODO: оптимизация: вместо того, чтобы каждый раз занулять таблицу и строить заново,
   //       нужно передавать методу изменённый\удалённый элемент и работать только с ним
-  private void initPartList() {
-    /*partListModel.clear();
-    AssemblyUnitService.getInstance().getPartList(1).forEach(part ->
-      partListModel.addElement(part)
-    );*/
-    
+  private void initPartTable() {    
     partTableModel.setRowCount(0);
     partTableModel.fireTableDataChanged();
     AssemblyUnitService.getInstance().getPartTable(1).forEach(partRow -> {
