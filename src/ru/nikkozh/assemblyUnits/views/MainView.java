@@ -18,6 +18,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
 public class MainView {
+  // TODO: проверить, какие из переменных используются только в своём локальном окружении и не нужны в scoupe класса
   public JFrame frame;
   
   private JLabel assemblyUnitName, partCount;
@@ -36,9 +37,7 @@ public class MainView {
   private ListSelectionModel partTableSelectionModel;
   private DefaultTableModel partTableModel;
   
-  private JPanel centerPanel, eastPanel, westPanel,
-                 creatingPanel, editingPanel,
-                 assemblyButtonsPanel;
+  private JPanel centerPanel, eastPanel, westPanel, assemblyButtonsPanel;
   
   private int selectedRow;
   
@@ -110,13 +109,16 @@ public class MainView {
   private void initCenterPanel() {
     centerPanel = new JPanel();
     centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-    initCreatingPanel();
-    initEditingPanel();
-    centerPanel.add(creatingPanel);
-    centerPanel.add(editingPanel);
+    
+    GridBagConstraints c = new GridBagConstraints();
+    JPanel centerSubPanel = new JPanel(new GridBagLayout());
+    
+    initCreatingSubPanel(centerSubPanel, c);
+    initEditingSubPanel(centerSubPanel, c);
+    centerPanel.add(centerSubPanel);
   }
   
-  private void initCreatingPanel() {
+  private void initCreatingSubPanel(JPanel centerSubPanel, GridBagConstraints c) {
     partNameForCreating = new JTextField(10);
     partAmountForCreating = new JTextField(10);
     
@@ -128,39 +130,36 @@ public class MainView {
       }
     });
     
-    GridBagConstraints c = new GridBagConstraints();
-    creatingPanel = new JPanel(new GridBagLayout());
-    
     c.gridx = 0;
     c.gridy = 0;
     c.insets = new Insets(3, 3, 3, 3);
     c.gridwidth = GridBagConstraints.REMAINDER;
-    creatingPanel.add(new JLabel("Добавить новую деталь"), c);
+    centerSubPanel.add(new JLabel("Добавить новую деталь"), c);
     
     c.gridx = 0;
     c.gridy = 1;
     c.gridwidth = 1;
-    creatingPanel.add(new JLabel("Наименование:"), c);
+    centerSubPanel.add(new JLabel("Наименование:"), c);
     
     c.gridx = 1;
     c.gridy = 1;
-    creatingPanel.add(partNameForCreating, c);
+    centerSubPanel.add(partNameForCreating, c);
     
     c.gridx = 0;
     c.gridy = 2;
-    creatingPanel.add(new JLabel("Количество:"), c);
+    centerSubPanel.add(new JLabel("Количество:"), c);
     
     c.gridx = 1;
     c.gridy = 2;
-    creatingPanel.add(partAmountForCreating, c);
+    centerSubPanel.add(partAmountForCreating, c);
     
     c.gridx = 0;
     c.gridy = 3;
     c.gridwidth = GridBagConstraints.REMAINDER;
-    creatingPanel.add(createPartButton, c);
+    centerSubPanel.add(createPartButton, c);
   }
   
-  private void initEditingPanel() {
+  private void initEditingSubPanel(JPanel centerSubPanel, GridBagConstraints c) {
     partNameForEditing = new JTextField(10);
     partAmountForEditing = new JTextField(10);
     
@@ -180,39 +179,37 @@ public class MainView {
       }
     });
     
-    GridBagConstraints c = new GridBagConstraints();
-    editingPanel = new JPanel(new GridBagLayout());
-    
     c.gridx = 0;
-    c.gridy = 0;
-    c.insets = new Insets(3, 3, 3, 3);
+    c.gridy = 4;
+    c.insets = new Insets(30, 3, 3, 3);
     c.gridwidth = GridBagConstraints.REMAINDER;
-    editingPanel.add(new JLabel("Редактировать деталь"), c);
+    centerSubPanel.add(new JLabel("Редактировать деталь"), c);
     
     c.gridx = 0;
-    c.gridy = 1;
+    c.gridy = 5;
+    c.insets = new Insets(3, 3, 3, 3);
     c.gridwidth = 1;
-    editingPanel.add(new JLabel("Наименование:"), c);
+    centerSubPanel.add(new JLabel("Наименование:"), c);
     
     c.gridx = 1;
-    c.gridy = 1;
-    editingPanel.add(partNameForEditing, c);
+    c.gridy = 5;
+    centerSubPanel.add(partNameForEditing, c);
     
     c.gridx = 0;
-    c.gridy = 2;
-    editingPanel.add(new JLabel("Количество:"), c);
+    c.gridy = 6;
+    centerSubPanel.add(new JLabel("Количество:"), c);
     
     c.gridx = 1;
-    c.gridy = 2;
-    editingPanel.add(partAmountForEditing, c);
+    c.gridy = 6;
+    centerSubPanel.add(partAmountForEditing, c);
     
     c.gridx = 0;
-    c.gridy = 3;
-    editingPanel.add(editPartButton, c);
+    c.gridy = 7;
+    centerSubPanel.add(editPartButton, c);
     
     c.gridx = 1;
-    c.gridy = 3;
-    editingPanel.add(deletePartButton, c);
+    c.gridy = 7;
+    centerSubPanel.add(deletePartButton, c);
   }
   
   private void initEastPanel() {
@@ -242,7 +239,7 @@ public class MainView {
     eastPanel.setLayout(new BoxLayout(eastPanel, BoxLayout.Y_AXIS));
     eastPanel.add(partCount);
     eastPanel.add(partListSP);
-    eastPanel.setPreferredSize(new Dimension(200, 0));
+    eastPanel.setPreferredSize(new Dimension(230, 0));
   }
   
   private void initAssemblyUnitList() {
