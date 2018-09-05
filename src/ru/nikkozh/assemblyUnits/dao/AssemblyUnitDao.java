@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -25,7 +27,7 @@ public class AssemblyUnitDao {
     }
     return assemblyUnitDao;
   }
-  
+    
   public boolean addPart(int assemblyUnitId, String partName, int partAmount) {
     boolean result = false;
     
@@ -80,23 +82,49 @@ public class AssemblyUnitDao {
     return result;
   }
   
+  // Т.к. к имени сборочной единицы всегда прибавляется её id, мы можем вместо целых экземпляров AssemblyUnit возвращать только их имена:
+   public List<String> getAssemblyUnitChildrenNames(int assemblyUnitId) {
+     List<String> childrenList = new ArrayList<String>();
+     
+     try {
+       // Получаем список подсборок переданной сборки:
+       String sql = "SELECT * FROM assembly_units WHERE parent_id = ?;";
+       Integer[] parameter = { assemblyUnitId };
+       resultSet = db.executeQuery(sql, parameter);
+       
+       while (resultSet.next()) {
+         childrenList.add("Сборочная единица №" + resultSet.getInt("id"));
+       }
+     } catch (Exception e) {
+       e.printStackTrace();
+     } finally {
+       closeAll();
+     }
+     
+     return childrenList;
+   }
+  
   // TODO: подумать над тем, чтобы вынести создание AssemblyUnit из DAO в Сервис
   public AssemblyUnit getAssemblyUnit(int id) {
     AssemblyUnit assemblyUnit = null;
     
     try {
-      String sql = "SELECT * FROM parts WHERE assembly_unit_id = ?;";
+      String sql = "SELECT * FROM assembly_units WHERE id = ?;";
       Integer[] parameter = { id };
       resultSet = db.executeQuery(sql, parameter);
       
-      if (resultSet.next()) {     
+      if (resultSet.next()) {
         assemblyUnit = new AssemblyUnit();
-        assemblyUnit.setId(resultSet.getInt("assembly_unit_id"));
-        assemblyUnit.setName("Сборочная единица " + resultSet.getInt("assembly_unit_id"));
+        assemblyUnit.setId(id);
+        assemblyUnit.setParentId(resultSet.getInt("parent_id"));
+        assemblyUnit.setName("Сборочная единица №" + id);
         
-        do {
+        sql = "SELECT * FROM parts WHERE assembly_unit_id = ?;";
+        resultSet = db.executeQuery(sql, parameter);
+        
+        while (resultSet.next()) {
           assemblyUnit.putPart(resultSet.getString("name"), resultSet.getInt("amount"));
-        } while (resultSet.next());
+        };
       }
     } catch (Exception e) {
       e.printStackTrace();

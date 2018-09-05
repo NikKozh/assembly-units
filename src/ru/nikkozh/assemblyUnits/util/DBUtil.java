@@ -13,7 +13,8 @@ public class DBUtil {
   private String user = "root";
   private String password = "root";
   private String url = "jdbc:mysql://localhost:3306/assembly_units_db" +
-                       "?useLegacyDatetimeCode=false&amp&serverTimezone=UTC "; // необходимые добавочные атрибуты для корректного учёта часового пояса сервера
+                       "?useLegacyDatetimeCode=false&amp&serverTimezone=UTC" + // необходимые добавочные атрибуты для корректного учёта часового пояса сервера
+                       "&useSSL=false"; 
   private String driver = "com.mysql.cj.jdbc.Driver";
   
   private static DBUtil db;
@@ -64,6 +65,21 @@ public class DBUtil {
         preparedStatement.setObject(i + 1, objects[i]);
       }
       resultSet = preparedStatement.executeQuery();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    
+    return resultSet;
+  }
+  
+  // Когда нужно получить результат, но не нужно передавать параметры:
+  public ResultSet executeQuery(String sql) {
+    if (getConnection() == null) {
+      return null;
+    }
+    
+    try {
+      resultSet = connection.prepareStatement(sql).executeQuery();
     } catch (Exception e) {
       e.printStackTrace();
     }

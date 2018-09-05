@@ -5,6 +5,7 @@ import java.util.TreeMap;
 
 public class AssemblyUnit {
   private int id;
+  private int parentId; // если -1 значит это корневая сборка
   private String name;
   private Map<String, Integer> parts = new TreeMap<>();
   
@@ -31,5 +32,13 @@ public class AssemblyUnit {
 
   public void setId(int id) {
     this.id = id;
+  }
+
+  public int getParentId() {
+    return parentId;
+  }
+
+  public void setParentId(int parentId) {
+    this.parentId = parentId;
   }
 }
