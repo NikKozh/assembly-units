@@ -108,11 +108,10 @@ public class MainView {
   }
   
   private void initCenterPanel() {
-    initCreatingPanel();
-    initEditingPanel();
-    
     centerPanel = new JPanel();
     centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+    initCreatingPanel();
+    initEditingPanel();
     centerPanel.add(creatingPanel);
     centerPanel.add(editingPanel);
   }
@@ -139,25 +138,26 @@ public class MainView {
     creatingPanel.add(new JLabel("Добавить новую деталь"), c);
     
     c.gridx = 0;
-    c.gridy = 3;
-    creatingPanel.add(createPartButton, c);
+    c.gridy = 1;
+    c.gridwidth = 1;
+    creatingPanel.add(new JLabel("Наименование:"), c);
     
     c.gridx = 1;
     c.gridy = 1;
-    c.gridwidth = 1;
     creatingPanel.add(partNameForCreating, c);
+    
+    c.gridx = 0;
+    c.gridy = 2;
+    creatingPanel.add(new JLabel("Количество:"), c);
     
     c.gridx = 1;
     c.gridy = 2;
     creatingPanel.add(partAmountForCreating, c);
     
     c.gridx = 0;
-    c.gridy = 1;
-    creatingPanel.add(new JLabel("Наименование:"), c);
-    
-    c.gridx = 0;
-    c.gridy = 2;
-    creatingPanel.add(new JLabel("Количество:"), c);
+    c.gridy = 3;
+    c.gridwidth = GridBagConstraints.REMAINDER;
+    creatingPanel.add(createPartButton, c);
   }
   
   private void initEditingPanel() {
@@ -189,10 +189,18 @@ public class MainView {
     c.gridwidth = GridBagConstraints.REMAINDER;
     editingPanel.add(new JLabel("Редактировать деталь"), c);
     
-    c.gridx = 1;
+    c.gridx = 0;
     c.gridy = 1;
     c.gridwidth = 1;
+    editingPanel.add(new JLabel("Наименование:"), c);
+    
+    c.gridx = 1;
+    c.gridy = 1;
     editingPanel.add(partNameForEditing, c);
+    
+    c.gridx = 0;
+    c.gridy = 2;
+    editingPanel.add(new JLabel("Количество:"), c);
     
     c.gridx = 1;
     c.gridy = 2;
@@ -205,17 +213,6 @@ public class MainView {
     c.gridx = 1;
     c.gridy = 3;
     editingPanel.add(deletePartButton, c);
-
-    // c.insets = new Insets(0, 0, 0, 10);
-    c.gridx = 0;
-    c.gridy = 1;
-    editingPanel.add(new JLabel("Наименование:"), c);
-    
-    c.gridx = 0;
-    c.gridy = 2;
-    editingPanel.add(new JLabel("Количество:"), c);
-    
-   //  editingPanel.setMaximumSize(new Dimension(350, 350));
   }
   
   private void initEastPanel() {
