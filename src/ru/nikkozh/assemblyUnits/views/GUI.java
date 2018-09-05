@@ -67,6 +67,9 @@ public class GUI {
           // Если не удалось найти символ "№", значит выбран пункт возврата к родительской сборке:
           AssemblyUnitService.getInstance().setCurrentAssemblyUnit(AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getParentId());
         }
+        selectedRow = -1; // при переходе в другую подсборку сбрасываем выделение деталей
+        partNameForEditing.setText("");
+        partAmountForEditing.setText("");
         initAssemblyUnitList();
         initPartTable();
       }
@@ -75,7 +78,35 @@ public class GUI {
     JScrollPane assemblyListSP = new JScrollPane(assemblyList);
     
     createAssemblyButton = new JButton("Добавить");
+    createAssemblyButton.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        if (AssemblyUnitService.getInstance().addChild()) {
+          initAssemblyUnitList();
+          initPartTable();
+        } else {
+          // TODO: добавить отображение ошибки
+          System.out.println("ADD CHILD ERROR");
+        }
+      }
+    });
+    
     deleteAssemblyButton = new JButton("Удалить");
+    deleteAssemblyButton.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        if (AssemblyUnitService.getInstance().deleteAssembly()) {
+          System.out.println("SUCESS DELETE");
+          // TODO: вынести в отдельную функцию очищения выделения и полей:
+          selectedRow = -1;
+          partNameForEditing.setText("");
+          partAmountForEditing.setText("");
+          
+          initAssemblyUnitList();
+          initPartTable();
+        }
+      }
+    });
     
     assemblyButtonsPanel = new JPanel(new FlowLayout());
     assemblyButtonsPanel.add(createAssemblyButton);
@@ -167,7 +198,7 @@ public class GUI {
       public void actionPerformed(ActionEvent e) {
         // TODO: подумать над рефакторингом, условие и вызов метода получаются вообще дикими (и то же самое в других местах):
         //       и ещё подумать над тем, чтобы преобразование string to int делал сервис, а не view
-        if (AssemblyUnitService.getInstance().updatePart(AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getId(),
+        if (selectedRow != -1 && AssemblyUnitService.getInstance().updatePart(AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getId(),
             partTable.getValueAt(selectedRow, 0).toString(), partNameForEditing.getText(), Integer.valueOf(partAmountForEditing.getText()))) {
           partNameForEditing.setText("");
           partAmountForEditing.setText("");
@@ -233,7 +264,7 @@ public class GUI {
     if (AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getParentId() != -1) {
       assemblyListModel.addElement("Вернуться в родительскую сборку");
     }
-    for (String assemblyUnitName : AssemblyUnitService.getInstance().getAssemblyUnitChildren()) {
+    for (String assemblyUnitName : AssemblyUnitService.getInstance().getAssemblyUnitChildrenNames()) {
       assemblyListModel.addElement(assemblyUnitName);
     }
     

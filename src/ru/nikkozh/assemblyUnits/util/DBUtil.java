@@ -45,7 +45,7 @@ public class DBUtil {
         preparedStatement.setObject(i + 1, objects[i]);
       }
       result = preparedStatement.executeUpdate();
-      close();
+      close(); // для того, чтобы вызывать этот метод из одного метода в DAO несколько раз
     } catch (Exception e) {
       e.printStackTrace();
     }

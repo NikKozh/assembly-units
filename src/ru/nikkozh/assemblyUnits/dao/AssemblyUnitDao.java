@@ -27,6 +27,76 @@ public class AssemblyUnitDao {
     }
     return assemblyUnitDao;
   }
+  
+  public boolean addAssemblyUnit(int parentId) {
+    boolean result = false;
+    
+    try {
+      String sql = "INSERT INTO assembly_units (parent_id) VALUE (?);";
+      Object[] parameter = { parentId };
+      if (db.executeUpdate(sql, parameter) == 1) {
+        result = true;
+        /*AssemblyUnit assemblyUnit = new AssemblyUnit();
+        // Нужно получить новый id, только что сгенерированный БД.
+        // В списке подсборок текущего родителя последняя подсборка гарантированно является той, которую мы создали:
+        List<Integer> childrenIds = getAssemblyUnitChildrenIds(parentId);
+        int id = childrenIds.get(childrenIds.size() - 1);
+        assemblyUnit.setId(id);
+        
+        // Остальные свойства экземпляра:
+        assemblyUnit.setParentId(parentId);
+        assemblyUnit.setName("Сборочная единица №" + id);*/
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      closeAll();
+    }
+    
+    return result;
+  }
+  
+  public boolean deleteDescendants(int assemblyUnitId) {
+    boolean result = true;
+    
+    try {
+      // Проверяем список детей текущей сборки:
+      String sql = "SELECT * FROM assembly_units WHERE parent_id = ?;";
+      Integer[] parameter = { assemblyUnitId };
+      resultSet = db.executeQuery(sql, parameter);
+      
+      // При рекурсивном обходе ResultSet будет закрыт, поэтому переносим результаты запроса в отдельный локальный массив:
+      List<Integer> childrenIds = new ArrayList<>();
+      while (resultSet.next()) {
+        childrenIds.add(resultSet.getInt("id"));
+      }
+      
+      // Для каждого ребёнка повторяём выполнение метода:
+      for (int childId : childrenIds) {
+        result = deleteDescendants(childId);
+      }
+      
+      if (result) {
+        // Если на предыдущих этапах рекурсии ошибок не было, то удаляем все детали, входящие в текущую сборку:
+        sql = "DELETE FROM parts WHERE assembly_unit_id = ?;";
+        // Т.к. DELETE вполне может вернуть 0 в данном случае, отдельной проверки возвращаемого значения не требуется:
+        db.executeUpdate(sql, parameter);
+        
+        // И, наконец, удаляем саму текущую сборку:
+        sql = "DELETE FROM assembly_units WHERE id = ?;";
+        if (db.executeUpdate(sql, parameter) != 1) {
+          result = false;
+        }
+      }
+    } catch (Exception e) {
+      result = false;
+      e.printStackTrace();
+    } finally {
+      closeAll();
+    }
+    
+    return result;
+  }
     
   public boolean addPart(int assemblyUnitId, String partName, int partAmount) {
     boolean result = false;
@@ -82,9 +152,9 @@ public class AssemblyUnitDao {
     return result;
   }
   
-  // Т.к. к имени сборочной единицы всегда прибавляется её id, мы можем вместо целых экземпляров AssemblyUnit возвращать только их имена:
-   public List<String> getAssemblyUnitChildrenNames(int assemblyUnitId) {
-     List<String> childrenList = new ArrayList<String>();
+  
+   public List<Integer> getAssemblyUnitChildrenIds(int assemblyUnitId) {
+     List<Integer> childrenList = new ArrayList<Integer>();
      
      try {
        // Получаем список подсборок переданной сборки:
@@ -93,7 +163,7 @@ public class AssemblyUnitDao {
        resultSet = db.executeQuery(sql, parameter);
        
        while (resultSet.next()) {
-         childrenList.add("Сборочная единица №" + resultSet.getInt("id"));
+         childrenList.add(resultSet.getInt("id"));
        }
      } catch (Exception e) {
        e.printStackTrace();

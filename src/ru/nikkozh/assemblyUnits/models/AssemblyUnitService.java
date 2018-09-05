@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.stream.Collectors;
 
+import com.sun.source.tree.ParenthesizedTree;
+
 import ru.nikkozh.assemblyUnits.dao.AssemblyUnitDao;
 
 public class AssemblyUnitService {
@@ -33,20 +35,45 @@ public class AssemblyUnitService {
     return currentAssemblyUnit;
   }
   
-  // Если не передали параметр - значит, нужны подсборки текущей сборочной единицы
-  public List<String> getAssemblyUnitChildren() {
-    return AssemblyUnitDao.getInstance().getAssemblyUnitChildrenNames(currentAssemblyUnit.getId());
+  // Удаление текущей сборки, включая все подсборки и все входящие в них детали:
+  public boolean deleteAssembly() {
+    if (currentAssemblyUnit.getParentId() == -1) {
+      return false; // удалить головную сборку нельзя
+    }
+    
+    int currentId = currentAssemblyUnit.getId(); // заранее записываем id текущей сборки, чтобы передать его в DAO
+    setCurrentAssemblyUnit(currentAssemblyUnit.getParentId()); // переключаем сборку на родительскую, т.к. текущая будет удалена
+    
+    return AssemblyUnitDao.getInstance().deleteDescendants(currentId);
   }
   
+  // Добавление подсборки в текущую сборку:
+  public boolean addChild() {
+    return AssemblyUnitDao.getInstance().addAssemblyUnit(currentAssemblyUnit.getId());
+  }
+  
+  // Получение имён всех подсборок текущей сборочной единицы
+  public List<String> getAssemblyUnitChildrenNames() {
+    // Т.к. к имени сборочной единицы всегда прибавляется её id, мы можем вместо целых экземпляров AssemblyUnit возвращать только их имена
+    List<String> childrenNames = new ArrayList<>();
+    
+    for (int childId : AssemblyUnitDao.getInstance().getAssemblyUnitChildrenIds(currentAssemblyUnit.getId())) {
+      childrenNames.add("Сборочная единица №" + childId);
+    }
+    
+    return childrenNames;
+  }
+  
+  // TODO: подумать над тем, чтобы убрать из подобных методов id сборочной единицы, т.к. мы можем доставать её из сервиса, а GUI везде как раз использует сервис
   public boolean addPart(int assemblyUnitId, String partName, int partAmount) {
     // TODO: при такой проверке невозможно различить, произошла ли ошибка в вводе или внутри БД
     // Может, сделать возвращаемый тип не логический, а что-нибудь посложнее?
     if (assemblyUnitId > 0 && !partName.isEmpty() && partAmount > 0) {
       setCurrentAssemblyUnit(assemblyUnitId);
 
-      for (String name : currentAssemblyUnit.getParts().keySet()) {
-        if (name.equals(partName)) {
-          return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, partName, partName, partAmount);
+      for (Map.Entry<String, Integer> nameAndAmount : currentAssemblyUnit.getParts().entrySet()) {
+        if (nameAndAmount.getKey().equals(partName)) {
+          return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, partName, partName, nameAndAmount.getValue() + partAmount);
         }
       }
       return AssemblyUnitDao.getInstance().addPart(assemblyUnitId, partName, partAmount);
