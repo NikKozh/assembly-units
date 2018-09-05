@@ -48,7 +48,7 @@ public class AssemblyUnitService {
   }
   
   // ƒобавление подсборки в текущую сборку:
-  public boolean addChild() {
+  public boolean addAssembly() {
     return AssemblyUnitDao.getInstance().addAssemblyUnit(currentAssemblyUnit.getId());
   }
   
@@ -65,26 +65,55 @@ public class AssemblyUnitService {
   }
   
   // TODO: подумать над тем, чтобы убрать из подобных методов id сборочной единицы, т.к. мы можем доставать еЄ из сервиса, а GUI везде как раз использует сервис
-  public boolean addPart(int assemblyUnitId, String partName, int partAmount) {
-    // TODO: при такой проверке невозможно различить, произошла ли ошибка в вводе или внутри Ѕƒ
-    // ћожет, сделать возвращаемый тип не логический, а что-нибудь посложнее?
-    if (assemblyUnitId > 0 && !partName.isEmpty() && partAmount > 0) {
-      setCurrentAssemblyUnit(assemblyUnitId);
+  public boolean addPart(String partName, String partAmountString) {
+    if (!partName.isEmpty()) {
+      try {
+        int partAmount = Integer.valueOf(partAmountString);
+        int assemblyUnitId = currentAssemblyUnit.getId();
+        
+        // TODO: при такой проверке невозможно различить, произошла ли ошибка в вводе или внутри Ѕƒ
+        // ћожет, сделать возвращаемый тип не логический, а что-нибудь посложнее?
+        if (partAmount > 0) {
+          setCurrentAssemblyUnit(assemblyUnitId);
 
-      for (Map.Entry<String, Integer> nameAndAmount : currentAssemblyUnit.getParts().entrySet()) {
-        if (nameAndAmount.getKey().equals(partName)) {
-          return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, partName, partName, nameAndAmount.getValue() + partAmount);
+          for (Map.Entry<String, Integer> nameAndAmount : currentAssemblyUnit.getParts().entrySet()) {
+            if (nameAndAmount.getKey().equals(partName)) {
+              return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, partName, partName, nameAndAmount.getValue() + partAmount);
+            }
+          }
+          
+          return AssemblyUnitDao.getInstance().addPart(assemblyUnitId, partName, partAmount);
         }
+      } catch (NumberFormatException e) {
+        // TODO: заменить на нормальный возврат ошибки в GUI
+        System.out.println("Integer.ValueOf ERROR");
       }
-      return AssemblyUnitDao.getInstance().addPart(assemblyUnitId, partName, partAmount);
     }
+    
     return false;
   }
   
-  public boolean updatePart(int assemblyUnitId, String oldPartName, String newPartName, int partAmount) {
-    if (assemblyUnitId > 0 && !oldPartName.isEmpty() && !newPartName.isEmpty() && partAmount > 0) {
-      return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, oldPartName, newPartName, partAmount);
+  public boolean updatePart(String oldPartName, String newPartName, String partAmountString) {
+    if (!newPartName.isEmpty()) {
+      try {
+        int partAmount = Integer.valueOf(partAmountString);
+        int assemblyUnitId = currentAssemblyUnit.getId();
+        
+        if (partAmount > 0) {
+          if (!oldPartName.isEmpty()) {
+            return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, oldPartName, newPartName, partAmount);
+          } else {
+            // ≈сли передали пустое старое им€, значит, пользователь пытаетс€ отредактировать количество деталей
+            // не выделив их в таблице, а введ€ им€ деталей вручную. —тоит попробовать поискать их:
+            return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, newPartName, newPartName, partAmount);
+          }
+        }
+      } catch (NumberFormatException e) {
+        // TODO: заменить на нормальный возврат ошибки в GUI
+        System.out.println("Integer.ValueOf ERROR"); 
+      }
     }
+
     return false;
   }
   
@@ -94,17 +123,7 @@ public class AssemblyUnitService {
     }
     return false;
   }
-  
-  public List<String> getPartList(int id) {
-    setCurrentAssemblyUnit(id);
-    
-    List<String> partList = new ArrayList<>();
-    currentAssemblyUnit.getParts().entrySet().stream().forEach(part ->
-      partList.add(part.getKey() + " | " + part.getValue() + " шт.")
-    );
-    return partList;
-  }
-  
+ 
   // ¬озвращаем вложенные Lists вместо String[][] дл€ того, чтобы можно было сделать перебор в функциональном стиле
   // ¬нутренний Vector нужен дл€ того, чтобы сразу передать его в JTable как row без доп. преобразований и приведений
   public List<Vector<String>> getPartTable(int id) {
@@ -125,5 +144,14 @@ public class AssemblyUnitService {
   // TODO: по сути, € сейчас одну строчку кода подлиннее заменил другой строчкой кода покороче. ≈сть ли смысл?
   public void setCurrentAssemblyUnit(int id) {
     currentAssemblyUnit = AssemblyUnitDao.getInstance().getAssemblyUnit(id);
+  }
+  
+  public void setCurrentAssemblyUnit(String id) {
+    try {
+      currentAssemblyUnit = AssemblyUnitDao.getInstance().getAssemblyUnit(Integer.valueOf(id));
+    } catch (NumberFormatException e) {
+      e.printStackTrace();
+      // TODO: сделать какую-то обработку ошибок
+    }
   }
 }
