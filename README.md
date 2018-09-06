@@ -1,4 +1,4 @@
-# Assembly Units Management.
+# Assembly Units Management
 Small desktop project on Java about managing assembly units. Uses the JDBC and MySQL.
 
 The app connects to DB on hosting by default. If you want to use a local MySQL server, you need to:
