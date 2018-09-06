@@ -7,11 +7,20 @@ import java.sql.ResultSet;
 
 // Класс, в котором хранится вся логика для подключения к БД и отправки туда команд
 public class DBUtil {
+ /* 
+  * Старые данные для входа на локальный сервер MySQL:
+
   private final String user = "root";
-  private final String password = "root";
+  private final String password = "root123";
   private final String url = "jdbc:mysql://localhost:3306/assembly_units_db" +
                        "?useLegacyDatetimeCode=false&amp&serverTimezone=UTC" + // необходимые добавочные атрибуты для корректного учёта часового пояса сервера
-                       "&useSSL=false"; 
+                       "&useSSL=false";
+  */
+  
+  private final String user = "sql7255404";
+  private final String password = "TuXvz2vxvB";
+  private final String url = "jdbc:mysql://sql7.freemysqlhosting.net:3306/sql7255404" +
+                             "?charset=utf8&useUnicode=true&characterEncoding=utf8";
   
   private static DBUtil db;
   
@@ -32,6 +41,7 @@ public class DBUtil {
     try {
       if (connection == null || connection.isClosed()) {
         connection = DriverManager.getConnection(url, user, password);
+        // connection.prepareStatement("SET NAMES utf8");
       }
     } catch (Exception e) {
       e.printStackTrace();
