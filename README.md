@@ -1,5 +1,5 @@
 # Assembly Units Management
-Small desktop project on Java about managing assembly units. Uses the JDBC and MySQL.
+Small desktop project on Java about managing assembly units and parts in them. Uses the JDBC and MySQL.
 
 The app connects to DB on hosting by default. If you want to use a local MySQL server, you need to:
 * Create new database named as assembly_units_db
