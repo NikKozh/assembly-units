@@ -4,18 +4,14 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 
-import ru.nikkozh.assemblyUnits.dao.AssemblyUnitDao;
-
-// Класс, в котором хранится вся логика для подключения к БД
+// Класс, в котором хранится вся логика для подключения к БД и отправки туда команд
 public class DBUtil {
-  private String user = "root";
-  private String password = "root";
-  private String url = "jdbc:mysql://localhost:3306/assembly_units_db" +
+  private final String user = "root";
+  private final String password = "root";
+  private final String url = "jdbc:mysql://localhost:3306/assembly_units_db" +
                        "?useLegacyDatetimeCode=false&amp&serverTimezone=UTC" + // необходимые добавочные атрибуты для корректного учёта часового пояса сервера
                        "&useSSL=false"; 
-  private String driver = "com.mysql.cj.jdbc.Driver";
   
   private static DBUtil db;
   
@@ -30,6 +26,18 @@ public class DBUtil {
       db = new DBUtil();
     }
     return db;
+  }
+  
+  public Connection getConnection() {
+    try {
+      if (connection == null || connection.isClosed()) {
+        connection = DriverManager.getConnection(url, user, password);
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    
+    return connection;
   }
   
   // Когда нужно передать параметры, но результата достаточно в виде int:
@@ -53,6 +61,21 @@ public class DBUtil {
     return result;
   }
   
+  // Когда нужно получить результат, но не нужно передавать параметры:
+  public ResultSet executeQuery(String sql) {
+    if (getConnection() == null) {
+      return null;
+    }
+    
+    try {
+      resultSet = connection.prepareStatement(sql).executeQuery();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    
+    return resultSet;
+  }
+  
   // Когда нужно и передать параметры, и получить результат запроса:
   public ResultSet executeQuery(String sql, Object[] objects) {
     if (getConnection() == null) {
@@ -71,34 +94,7 @@ public class DBUtil {
     
     return resultSet;
   }
-  
-  // Когда нужно получить результат, но не нужно передавать параметры:
-  public ResultSet executeQuery(String sql) {
-    if (getConnection() == null) {
-      return null;
-    }
-    
-    try {
-      resultSet = connection.prepareStatement(sql).executeQuery();
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    
-    return resultSet;
-  }
-  
-  public Connection getConnection() {
-    try {
-      if (connection == null || connection.isClosed()) {
-        connection = DriverManager.getConnection(url, user, password);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    
-    return connection;
-  }
-  
+
   public void close() {
     try {
       if (resultSet != null) {

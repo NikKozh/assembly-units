@@ -1,23 +1,19 @@
 package ru.nikkozh.assemblyUnits.models;
 
-import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
-import java.util.stream.Collectors;
-
-import com.sun.source.tree.ParenthesizedTree;
 
 import ru.nikkozh.assemblyUnits.dao.AssemblyUnitDao;
 
+// Сервис, выступающий в качестве контроллера: обрабатывает информацию из GUI и передаёт дальше в DAO
 public class AssemblyUnitService {
   private static AssemblyUnitService assemblyUnitService;
   
-  // Отдельно храним ссылку на сборочную единицу, с которой работали последний раз.
-  // Если мы будем работать с ней же повторно, нам не придётся лишний раз обращаться к БД.
-  // TODO: получается не самый лучший подход - мы по два раза открываем соединение с БД + другие косяки. Мб выпилить?
+  // Отдельно храним ссылку на сборочную единицу, с которой работаем в текущий момент.
+  // Это позволяет не обращаться лишний раз к БД для выполнения промежуточных операций
+  // и обеспечивает гибкость Сервиса.
   private AssemblyUnit currentAssemblyUnit;
   
   private AssemblyUnitService() {
@@ -33,6 +29,18 @@ public class AssemblyUnitService {
   
   public AssemblyUnit getCurrentAssemblyUnit() {
     return currentAssemblyUnit;
+  }
+  
+  public void setCurrentAssemblyUnit(int id) {
+    currentAssemblyUnit = AssemblyUnitDao.getInstance().getAssemblyUnit(id);
+  }
+
+  public void setCurrentAssemblyUnit(String id) {
+    try {
+      currentAssemblyUnit = AssemblyUnitDao.getInstance().getAssemblyUnit(Integer.valueOf(id));
+    } catch (NumberFormatException e) {
+      System.out.println("Integer.ValueOf ERROR in setCurrentAssemblyUnit method"); 
+    }
   }
   
   // Удаление текущей сборки, включая все подсборки и все входящие в них детали:
@@ -64,35 +72,28 @@ public class AssemblyUnitService {
     return childrenNames;
   }
   
-  // TODO: подумать над тем, чтобы убрать из подобных методов id сборочной единицы, т.к. мы можем доставать её из сервиса, а GUI везде как раз использует сервис
   public boolean addPart(String partName, String partAmountString) {
     if (!partName.isEmpty()) {
       try {
         int partAmount = Integer.valueOf(partAmountString);
         int assemblyUnitId = currentAssemblyUnit.getId();
         
-        // TODO: при такой проверке невозможно различить, произошла ли ошибка в вводе или внутри БД
-        // Может, сделать возвращаемый тип не логический, а что-нибудь посложнее?
         if (partAmount > 0) {
-          setCurrentAssemblyUnit(assemblyUnitId);
-
           for (Map.Entry<String, Integer> nameAndAmount : currentAssemblyUnit.getParts().entrySet()) {
             if (nameAndAmount.getKey().equals(partName)) {
               return AssemblyUnitDao.getInstance().updatePart(assemblyUnitId, partName, partName, nameAndAmount.getValue() + partAmount);
             }
           }
-          
           return AssemblyUnitDao.getInstance().addPart(assemblyUnitId, partName, partAmount);
         }
       } catch (NumberFormatException e) {
-        // TODO: заменить на нормальный возврат ошибки в GUI
-        System.out.println("Integer.ValueOf ERROR");
+        System.out.println("Integer.ValueOf ERROR in addPart method");
       }
     }
     
     return false;
   }
-  
+
   public boolean updatePart(String oldPartName, String newPartName, String partAmountString) {
     if (!newPartName.isEmpty()) {
       try {
@@ -109,49 +110,34 @@ public class AssemblyUnitService {
           }
         }
       } catch (NumberFormatException e) {
-        // TODO: заменить на нормальный возврат ошибки в GUI
-        System.out.println("Integer.ValueOf ERROR"); 
+        System.out.println("Integer.ValueOf ERROR in updatePart method"); 
       }
     }
 
     return false;
   }
-  
-  public boolean deletePart(int assemblyUnitId, String partName) {
-    if (assemblyUnitId > 0 && !partName.isEmpty()) {
+
+  public boolean deletePart(String partName) {
+    if (!partName.isEmpty()) {
+      int assemblyUnitId = currentAssemblyUnit.getId();
       return AssemblyUnitDao.getInstance().deletePart(assemblyUnitId, partName);
     }
     return false;
   }
- 
-  // Возвращаем вложенные Lists вместо String[][] для того, чтобы можно было сделать перебор в функциональном стиле
-  // Внутренний Vector нужен для того, чтобы сразу передать его в JTable как row без доп. преобразований и приведений
+
+  // Внутренний Vector нужен для того, чтобы сразу передать его в таблицу одним аргументом без доп. преобразований и приведений
   public List<Vector<String>> getPartTable(int id) {
     setCurrentAssemblyUnit(id);
     
-    List<Vector<String>> partTable = new ArrayList();
+    List<Vector<String>> partTable = new ArrayList<>();
     if (currentAssemblyUnit != null) {
-      currentAssemblyUnit.getParts().entrySet().stream().forEach(part -> {
+      for (Map.Entry<String, Integer> part : currentAssemblyUnit.getParts().entrySet()) {
         Vector<String> partColumns = new Vector<String>();
         partColumns.add(part.getKey());
         partColumns.add(part.getValue().toString());
         partTable.add(partColumns);
-      });
+      }
     }
     return partTable;
-  }
-  
-  // TODO: по сути, я сейчас одну строчку кода подлиннее заменил другой строчкой кода покороче. Есть ли смысл?
-  public void setCurrentAssemblyUnit(int id) {
-    currentAssemblyUnit = AssemblyUnitDao.getInstance().getAssemblyUnit(id);
-  }
-  
-  public void setCurrentAssemblyUnit(String id) {
-    try {
-      currentAssemblyUnit = AssemblyUnitDao.getInstance().getAssemblyUnit(Integer.valueOf(id));
-    } catch (NumberFormatException e) {
-      e.printStackTrace();
-      // TODO: сделать какую-то обработку ошибок
-    }
   }
 }

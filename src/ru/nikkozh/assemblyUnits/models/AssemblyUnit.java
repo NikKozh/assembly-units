@@ -3,10 +3,13 @@ package ru.nikkozh.assemblyUnits.models;
 import java.util.Map;
 import java.util.TreeMap;
 
+//  ласс, представл€ющий сборочную единицу
 public class AssemblyUnit {
   private int id;
-  private int parentId; // если -1 значит это корнева€ сборка
+  private int parentId; // идентификатор родительской сборки; -1 означает, что это корнева€ сборка
   private String name;
+  
+  // Ѕлагодар€ хранению деталей в TreeMap, мы получаем автоматическую сортировку их наименований без дополнительных действий:
   private Map<String, Integer> parts = new TreeMap<>();
   
   public void setName(String name) {
@@ -22,7 +25,6 @@ public class AssemblyUnit {
   }
 
   public void putPart(String partName, int partAmount) {
-    // TODO: сделать проверку на существование данных деталей и суммирование в таком случае их количества
     parts.put(partName, partAmount);
   }
 

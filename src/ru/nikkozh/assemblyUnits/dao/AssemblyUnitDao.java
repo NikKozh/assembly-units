@@ -1,17 +1,14 @@
 package ru.nikkozh.assemblyUnits.dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import ru.nikkozh.assemblyUnits.models.AssemblyUnit;
 import ru.nikkozh.assemblyUnits.util.DBUtil;
 
+// Data Access Object, который принимает конкретные команды от Сервиса с уже обработанными данными
+// и выполняет необходимые действия в БД через вспомогательный класс DBUtil
 public class AssemblyUnitDao {
   private final DBUtil db;
   private ResultSet resultSet;
@@ -27,7 +24,7 @@ public class AssemblyUnitDao {
     }
     return assemblyUnitDao;
   }
-  
+
   public boolean addAssemblyUnit(int parentId) {
     boolean result = false;
     
@@ -36,16 +33,6 @@ public class AssemblyUnitDao {
       Object[] parameter = { parentId };
       if (db.executeUpdate(sql, parameter) == 1) {
         result = true;
-        /*AssemblyUnit assemblyUnit = new AssemblyUnit();
-        // Нужно получить новый id, только что сгенерированный БД.
-        // В списке подсборок текущего родителя последняя подсборка гарантированно является той, которую мы создали:
-        List<Integer> childrenIds = getAssemblyUnitChildrenIds(parentId);
-        int id = childrenIds.get(childrenIds.size() - 1);
-        assemblyUnit.setId(id);
-        
-        // Остальные свойства экземпляра:
-        assemblyUnit.setParentId(parentId);
-        assemblyUnit.setName("Сборочная единица №" + id);*/
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -56,6 +43,12 @@ public class AssemblyUnitDao {
     return result;
   }
   
+  /*
+   * Рекурсивный метод для удаления переданной сборки и всех её потомков.
+   * Обычно с рекурсией стоит проявлять осторожность, и да, этот метод действительно медленный,
+   * однако учитывается малый масштаб программы и допущение, что дерево подсборок не будет большим.
+   * При большом количестве данных определённо стоит использовать иные алгоритмы и способы хранения деревьев в БД.
+   */
   public boolean deleteDescendants(int assemblyUnitId) {
     boolean result = true;
     
@@ -77,16 +70,12 @@ public class AssemblyUnitDao {
       }
       
       if (result) {
-        // Если на предыдущих этапах рекурсии ошибок не было, то удаляем все детали, входящие в текущую сборку:
-        sql = "DELETE FROM parts WHERE assembly_unit_id = ?;";
-        // Т.к. DELETE вполне может вернуть 0 в данном случае, отдельной проверки возвращаемого значения не требуется:
-        db.executeUpdate(sql, parameter);
-        
         // И, наконец, удаляем саму текущую сборку:
         sql = "DELETE FROM assembly_units WHERE id = ?;";
         if (db.executeUpdate(sql, parameter) != 1) {
           result = false;
         }
+        // Благодаря внешнему ключу в БД все каскадно связанные с этой сборкой детали будут автоматически удалены
       }
     } catch (Exception e) {
       result = false;
@@ -152,29 +141,26 @@ public class AssemblyUnitDao {
     return result;
   }
   
-  
-   public List<Integer> getAssemblyUnitChildrenIds(int assemblyUnitId) {
-     List<Integer> childrenList = new ArrayList<Integer>();
+  public List<Integer> getAssemblyUnitChildrenIds(int assemblyUnitId) {
+    List<Integer> childrenList = new ArrayList<Integer>();
      
-     try {
-       // Получаем список подсборок переданной сборки:
-       String sql = "SELECT * FROM assembly_units WHERE parent_id = ?;";
-       Integer[] parameter = { assemblyUnitId };
-       resultSet = db.executeQuery(sql, parameter);
-       
-       while (resultSet.next()) {
-         childrenList.add(resultSet.getInt("id"));
-       }
-     } catch (Exception e) {
-       e.printStackTrace();
-     } finally {
-       closeAll();
-     }
-     
-     return childrenList;
-   }
+    try {
+      String sql = "SELECT * FROM assembly_units WHERE parent_id = ?;";
+      Integer[] parameter = { assemblyUnitId };
+      resultSet = db.executeQuery(sql, parameter);
+      
+      while (resultSet.next()) {
+        childrenList.add(resultSet.getInt("id"));
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      closeAll();
+    }
+    
+    return childrenList;
+  }
   
-  // TODO: подумать над тем, чтобы вынести создание AssemblyUnit из DAO в Сервис
   public AssemblyUnit getAssemblyUnit(int id) {
     AssemblyUnit assemblyUnit = null;
     

@@ -1,24 +1,21 @@
 package ru.nikkozh.assemblyUnits.views;
 
 import javax.swing.*;
-import javax.swing.event.ListDataEvent;
-import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
-
-import javafx.scene.control.TableSelectionModel;
-import ru.nikkozh.assemblyUnits.models.AssemblyUnitService;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.util.Vector;
 
+import ru.nikkozh.assemblyUnits.models.AssemblyUnitService;
+
+// Класс, полностью отвечающий за весь GUI приложения
 public class MainView {
-  // TODO: проверить, какие из переменных используются только в своём локальном окружении и не нужны в scoupe класса
   public JFrame frame;
   
   private JLabel assemblyUnitName, partCount;
@@ -33,16 +30,13 @@ public class MainView {
   private DefaultListModel<String> assemblyListModel;
   
   private JTable partTable;
-  private String[] partTableColumnNames = { "Наименование", "Количество (шт.)" };
   private ListSelectionModel partTableSelectionModel;
   private DefaultTableModel partTableModel;
   
   private JPanel centerPanel, eastPanel, westPanel, assemblyButtonsPanel;
   
-  private int selectedRow;
+  private int selectedRow; // последняя выделенная пользователем деталь; нужно для того, чтобы сохранять выделение при обновлении таблицы
   
-  // TODO: рефакторинг: разделить конструктор на несколько методов
-  // TODO: если будет время, сделать всякие удобные мелочи типа фокуса на полях ввода, отправки по нажатию энтера и т.д.
   public MainView() {
     selectedRow = -1;
     
@@ -54,13 +48,12 @@ public class MainView {
     initCenterPanel();
     initEastPanel();
     
-    // TODO: настроить пространство между компонентами главного BorderLayout (gap)
     container.add(BorderLayout.WEST, westPanel);
     container.add(BorderLayout.CENTER, centerPanel);
     container.add(BorderLayout.EAST, eastPanel);
     
-    initPartTable();
-    initAssemblyUnitList();
+    refreshPartTable();
+    refreshAssemblyUnitList();
     
     frame.setMinimumSize(new Dimension(700, 300));
     frame.setLocationRelativeTo(null);
@@ -79,6 +72,7 @@ public class MainView {
       }
     });
     JScrollPane assemblyListSP = new JScrollPane(assemblyList);
+    assemblyListSP.setPreferredSize(new Dimension(100, 0));
     
     createAssemblyButton = new JButton("Добавить");
     createAssemblyButton.addActionListener(new ActionListener() {
@@ -99,7 +93,7 @@ public class MainView {
     assemblyButtonsPanel = new JPanel(new FlowLayout());
     assemblyButtonsPanel.add(createAssemblyButton);
     assemblyButtonsPanel.add(deleteAssemblyButton);
-    
+
     westPanel = new JPanel(new BorderLayout());
     westPanel.add(assemblyUnitName, BorderLayout.NORTH);
     westPanel.add(assemblyListSP, BorderLayout.CENTER);
@@ -214,6 +208,8 @@ public class MainView {
   
   private void initEastPanel() {
     partCount = new JLabel();
+  
+    String[] partTableColumnNames = { "Наименование", "Количество (шт.)" };
     
     partTable = new JTable() {
       @Override
@@ -242,7 +238,7 @@ public class MainView {
     eastPanel.setPreferredSize(new Dimension(230, 0));
   }
   
-  private void initAssemblyUnitList() {
+  private void refreshAssemblyUnitList() {
     assemblyListModel.clear();
     
     if (AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getParentId() != -1) {
@@ -256,15 +252,15 @@ public class MainView {
   }
   
   /*
-   * При любом изменений набора деталей текущая таблица обнуляется и список загружается из БД заново.
-   * Это далеко не самый оптимальный подход, но учитывая, что проект небольшой и не рассчитан
-   * на большое количество информации, я посчитал его допустимым.
-   * 
-   * В противном случае необходимо было бы отдельно отслеживать добавление, изменение и удаление
-   * элементов, при необходимости сдвигать список внутри модели таблицы и при небольших списках
-   * выигрыш в прозводительности был бы минимален.
-   */
-  private void initPartTable() {
+  * При любом изменений набора деталей текущая таблица обнуляется и список загружается из БД заново.
+  * Это далеко не самый оптимальный подход, но учитывая, что проект небольшой и не рассчитан
+  * на большое количество информации, я посчитал его допустимым.
+  * 
+  * В противном случае необходимо было бы отдельно отслеживать добавление, изменение и удаление
+  * элементов, при необходимости сдвигать список внутри модели таблицы и при небольших списках
+  * выигрыш в прозводительности был бы минимален.
+  */
+  private void refreshPartTable() {
     // При изменении количества элементов таблицы необходимо сохранять выделение, сделанное пользователем:
     String selectedPart = null;
     if (selectedRow != -1) {
@@ -272,9 +268,10 @@ public class MainView {
     }
     
     partTableModel.setRowCount(0);
-    AssemblyUnitService.getInstance().getPartTable(AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getId()).forEach(partRow -> {
+    int currentId = AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getId();
+    for (Vector<String> partRow : AssemblyUnitService.getInstance().getPartTable(currentId)) {
       partTableModel.addRow(partRow);
-    });
+    }
     partTableModel.fireTableDataChanged();
     
     partCount.setText("Количество деталей: " + partTableModel.getRowCount());
@@ -290,28 +287,33 @@ public class MainView {
   }
   
   private void changeAssembly() {
-    int indexOf = assemblyList.getSelectedValue().indexOf("№");
-    
-    if (indexOf != -1) {
-      String selectedAssemblyUnitId = assemblyList.getSelectedValue().substring(indexOf + 1);
-      AssemblyUnitService.getInstance().setCurrentAssemblyUnit(selectedAssemblyUnitId);
-    } else {
-      // Если не удалось найти символ "№", значит выбран пункт возврата к родительской сборке
-      int parentId = AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getParentId();
-      AssemblyUnitService.getInstance().setCurrentAssemblyUnit(parentId);
+    if (!assemblyList.isSelectionEmpty()) {
+      // Поскольку у пользователя нет возможности задать имя сборки и мы можем явно этим управлять,
+      // то полагаемся только на символ "№", после которого гарантированно идёт номер сборки:
+      int indexOf = assemblyList.getSelectedValue().indexOf("№");
+      
+      if (indexOf != -1) {
+        String selectedAssemblyUnitId = assemblyList.getSelectedValue().substring(indexOf + 1);
+        AssemblyUnitService.getInstance().setCurrentAssemblyUnit(selectedAssemblyUnitId);
+      } else {
+        // Если не удалось найти символ "№", значит выбран пункт возврата к родительской сборке
+        int parentId = AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getParentId();
+        AssemblyUnitService.getInstance().setCurrentAssemblyUnit(parentId);
+      }
+      
+      // При переходе в другую подсборку указываем, что выделение детали, выбранной пользователем, сохранять не нужно:
+      selectedRow = -1; 
+      partNameForEditing.setText("");
+      partAmountForEditing.setText("");
+      refreshAssemblyUnitList();
+      refreshPartTable();
     }
-    
-    selectedRow = -1; // при переходе в другую подсборку указываем, что выбранную пользователем деталь сохранять не нужно
-    partNameForEditing.setText("");
-    partAmountForEditing.setText("");
-    initAssemblyUnitList();
-    initPartTable();
   }
   
   private void addAssembly() {
     if (AssemblyUnitService.getInstance().addAssembly()) {
-      initAssemblyUnitList();
-      initPartTable();
+      refreshAssemblyUnitList();
+      refreshPartTable();
     }
   }
   
@@ -321,8 +323,8 @@ public class MainView {
       partNameForEditing.setText("");
       partAmountForEditing.setText("");
       
-      initAssemblyUnitList();
-      initPartTable();
+      refreshAssemblyUnitList();
+      refreshPartTable();
     }
   }
   
@@ -344,33 +346,36 @@ public class MainView {
     if (AssemblyUnitService.getInstance().addPart(partName, partAmount)) {
       partNameForCreating.setText("");
       partAmountForCreating.setText("");
-      initPartTable();
+      refreshPartTable();
     }
   }
   
   private void updatePart() {
     String newName = partNameForEditing.getText();
-    String oldName = (selectedRow != -1) ? partTable.getValueAt(selectedRow, 0).toString() : "";
     String newAmount = partAmountForEditing.getText();
+    String oldName = (selectedRow != -1) ?
+                     partTable.getValueAt(selectedRow, 0).toString() :
+                     "";
  
     if (AssemblyUnitService.getInstance().updatePart(oldName, newName, newAmount)) {
       partNameForEditing.setText("");
       partAmountForEditing.setText("");
       partTable.clearSelection();
       selectedRow = -1;
-      initPartTable();
+      refreshPartTable();
     }
   }
   
   private void deletePart() {
-    int currentId = AssemblyUnitService.getInstance().getCurrentAssemblyUnit().getId();
-    String partName = (selectedRow != -1) ? partTable.getValueAt(selectedRow, 0).toString() : partNameForEditing.getText();
+    String partName = (selectedRow != -1) ?
+                      partTable.getValueAt(selectedRow, 0).toString() :
+                      partNameForEditing.getText();
     
-    if (AssemblyUnitService.getInstance().deletePart(currentId, partName)) {
+    if (AssemblyUnitService.getInstance().deletePart(partName)) {
       partNameForEditing.setText("");
       partAmountForEditing.setText("");
       selectedRow = -1;
-      initPartTable();
+      refreshPartTable();
     }
   }
 }
